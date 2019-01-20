@@ -1,11 +1,11 @@
-local vimslime = {}
+local M = {}
 
-vimslime.state = {
+M.state = {
   target_pane = nil
 }
 
-vimslime.set_target_pane = function (pane)
-  vimslime.state.target_pane = pane
+M.set_target_pane = function (pane)
+  M.state.target_pane = pane
 end
 
 -- list_panes_text is output of 'tmux list-panes -a'
@@ -36,13 +36,13 @@ local guess_target_pane = function ()
   return guessed_target_pane
 end
 
-vimslime.get_target_pane = function ()
-  if vimslime.state.target_pane then
-    return vimslime.state.target_pane
+M.get_target_pane = function ()
+  if M.state.target_pane then
+    return M.state.target_pane
   end
 
   local guessed_target_pane = guess_target_pane()
-  vimslime.set_target_pane(guessed_target_pane)
+  M.set_target_pane(guessed_target_pane)
   return guessed_target_pane
 end
 
@@ -89,22 +89,22 @@ local run_commands = function (commands)
   end
 end
 
-vimslime.paste = {}
-vimslime.paste.text = function (text)
+M.paste = {}
+M.paste.text = function (text)
   local text = text or get_selected_text()
   local escaped_text = escape(text)
   local commands = {
     'tmux set-buffer -b vimslime -- "'..tostring(escaped_text)..'"',
-    'tmux paste-buffer -d -b vimslime -t '..tostring(vimslime.get_target_pane())
+    'tmux paste-buffer -d -b vimslime -t '..tostring(M.get_target_pane())
   }
   run_commands(commands)
 end
 
-vimslime.paste.python = function (text)
+M.paste.python = function (text)
   local text = text or get_selected_text()
-  vimslime.paste.text('%cpaste\n')
-  vimslime.paste.text(tostring(text)..'\n')
-  vimslime.paste.text('--\n')
+  M.paste.text('%cpaste\n')
+  M.paste.text(tostring(text)..'\n')
+  M.paste.text('--\n')
 end
 
-return vimslime
+return M
