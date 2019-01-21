@@ -46,33 +46,30 @@ M.get_target_pane = function ()
   return guessed_target_pane
 end
 
-local clamp_column_to_line = function(line, column)
-  column = column >= 0 and column or 0
-  column = column < #line and column or #line-1
-  return column
+local get_buffer_lines = function (start_line, end_line)
+  local buffer = vim.api.nvim_get_current_buf()
+  local buffer_lines = vim.api.nvim_buf_get_lines(buffer, start_line-1, end_line, true)
+  return buffer_lines
+end
+
+local join_table = function (table, sep)
+  local sep = sep or '\n'
+  local result = ''
+  for k,v in pairs(table) do
+    result = result..v..sep
+  end
+  return result
 end
 
 local get_selected_text = function ()
   local buffer = vim.api.nvim_get_current_buf()
-  local sel_start = vim.api.nvim_buf_get_mark(buffer, '<')
-  local sel_start_line = sel_start[1]
-  local sel_end = vim.api.nvim_buf_get_mark(buffer, '>')
-  local sel_end_line = sel_end[1]
-  local lines = vim.api.nvim_buf_get_lines(buffer, sel_start_line-1, sel_end_line, true)
-  local sel_start_column = sel_start[2]
-  local sel_end_column = sel_end[2]
-  sel_start_column = clamp_column_to_line(lines[1], sel_start_column)
-  sel_end_column = clamp_column_to_line(lines[#lines], sel_end_column)
-  local selection = ''
-  for line_i = 1, #lines do
-    if line_i == 1 then
-      selection = selection..(lines[1]:sub(sel_start_column+1, sel_start_line == sel_end_line and sel_end_column+1 or #lines[1]))
-    elseif line_i == #lines then
-      selection = selection..'\n'..(lines[#lines]:sub(0, sel_end_column))
-    else
-      selection = selection..'\n'..lines[line_i]
-    end
-  end
+  local sel_start, sel_end = vim.api.nvim_buf_get_mark(buffer, '<'), vim.api.nvim_buf_get_mark(buffer, '>')
+  local sel_start_line, sel_end_line = sel_start[1], sel_end[1]
+  local sel_start_column, sel_end_column = sel_start[2], sel_end[2]
+  local lines = get_buffer_lines(sel_start_line, sel_end_line)
+  lines[1] = lines[1]:sub(sel_start_column+1)
+  lines[#lines] = lines[#lines]:sub(1, sel_start_line == sel_end_line and sel_end_column-sel_start_column+1 or sel_end_column+1)
+  local selection = join_table(lines)
   return selection
 end
 
