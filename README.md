@@ -5,15 +5,9 @@ nvim-slime is a pure Lua implementation of https://common-lisp.net/project/slime
 I just threw this together as a proof-of-concept. Probably a lot of things don't work. PRs welcome.
 
 # Installation
+Using [vim-plug](https://github.com/junegunn/vim-plug),
 ```
-$ git clone https://github.com/chadvoegele/nvim-slime.git ~/.local/share/nvim/site/lua/nvim-slime
-$ cat << FOE >> ~/.config/nvim/init.vim
-lua << EOF
-nvis = require('nvim-slime')
-EOF
-
-xmap <c-c><c-c> :lua nvis.paste.text() <CR>
-FOE
+Plug 'chadvoegele/nvim-slime'
 ```
 
 # License
