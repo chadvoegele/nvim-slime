@@ -125,8 +125,8 @@ local run_commands = function (commands)
   end
 end
 
-M.paste = {}
-M.paste.text = function (text)
+M.paste_type = {}
+M.paste_type.text = function (text)
   local text = text or get_selected_text()
   local escaped_text = escape(text)
   local commands = {
@@ -136,11 +136,17 @@ M.paste.text = function (text)
   run_commands(commands)
 end
 
-M.paste.python = function (text)
+M.paste_type.python = function (text)
   local text = text or get_selected_text()
-  M.paste.text('%cpaste\n')
-  M.paste.text(tostring(text)..'\n')
-  M.paste.text('--\n')
+  M.paste_type.text('%cpaste\n')
+  M.paste_type.text(tostring(text)..'\n')
+  M.paste_type.text('--\n')
+end
+
+M.paste = function ()
+  local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
+  local f = M.paste_type[filetype]
+  if f then f() else M.paste_type.text() end
 end
 
 return M
