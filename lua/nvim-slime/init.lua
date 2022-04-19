@@ -1,7 +1,8 @@
 local M = {}
 
 M.state = {
-  target_pane = nil
+  target_pane = nil,
+  COMMAND_CHARS_LIMIT = 10000
 }
 
 M.set_target_pane = function (pane)
@@ -26,11 +27,16 @@ local get_current_tmux_pane_id = function (list_panes_text, tmux_pane_id)
   end
 end
 
+local capture_command = function (command)
+  local proc = assert(io.popen(command), "Failed to run command="..command)
+  local text = proc:read('*a')
+  proc:close()
+  return text
+end
+
 -- Guess is other pane in current window.
 local guess_target_pane = function ()
-  local proc = assert(io.popen('tmux list-panes -a'))
-  local pane_text = proc:read('*a')
-  proc:close()
+  local pane_text = capture_command('tmux list-panes -a')
 
   local tmux_pane_env = os.getenv('TMUX_PANE')
   if not tmux_pane_env then
@@ -116,29 +122,41 @@ local escape = function (text)
   return text:gsub('"', '\\"'):gsub('[$]', '\\$')
 end
 
-local run_commands = function (commands)
-  for _,command in ipairs(commands) do
-    cmdexit = os.execute(command)
-    if not cmdexit then
-      return
-    end
-  end
+local get_buffer_path = function ()
+  return '/dev/shm/vimslime_buffer.'..os.time()..'.txt'
 end
 
 M.paste_type = {}
 M.paste_type.text = function (text)
   local text = text or get_selected_text()
   local escaped_text = escape(text)
-  local commands = {
-    'tmux set-buffer -b vimslime -- "'..tostring(escaped_text)..'"',
-    'tmux paste-buffer -d -b vimslime -t '..tostring(get_target_pane())
-  }
-  run_commands(commands)
+  if #text < M.state.COMMAND_CHARS_LIMIT then
+    os.execute('tmux set-buffer -b vimslime -- "'..tostring(escaped_text)..'"')
+  else
+    local buffer_path = get_buffer_path()
+    local handle = assert(io.open(buffer_path, 'w'), "Failed to open buffer_path="..buffer_path)
+    handle:write(escaped_text)
+    handle:close()
+    os.execute('tmux load-buffer -b vimslime '..buffer_path)
+    os.remove(buffer_path)
+  end
+  os.execute('tmux paste-buffer -r -d -b vimslime -t '..get_target_pane())
+end
+
+local function wait_for_cpaste_entry(target_pane, wait_time_seconds)
+  local wait_time_seconds = wait_time_seconds or 0.01
+  local pane_text = capture_command('tmux capture-pane -p -E - -S 0  -t '..target_pane)
+  local entry_prompt = string.match(pane_text, "Pasting code;[^\n]*\n:\n$")
+  if not entry_prompt and wait_time_seconds < 1 then
+    os.execute('sleep '..wait_time_seconds..'s')
+    wait_for_cpaste_entry(target_pane, wait_time_seconds*2)
+  end
 end
 
 M.paste_type.python = function (text)
   local text = text or get_selected_text()
   M.paste_type.text('%cpaste\n')
+  wait_for_cpaste_entry(get_target_pane())
   M.paste_type.text(tostring(text)..'\n')
   M.paste_type.text('--\n')
 end
