@@ -129,13 +129,13 @@ end
 M.paste_type = {}
 M.paste_type.text = function (text)
   local text = text or get_selected_text()
-  local escaped_text = escape(text)
   if #text < M.state.COMMAND_CHARS_LIMIT then
+    local escaped_text = escape(text)
     os.execute('tmux set-buffer -b vimslime -- "'..tostring(escaped_text)..'"')
   else
     local buffer_path = get_buffer_path()
     local handle = assert(io.open(buffer_path, 'w'), "Failed to open buffer_path="..buffer_path)
-    handle:write(escaped_text)
+    handle:write(text)
     handle:close()
     os.execute('tmux load-buffer -b vimslime '..buffer_path)
     os.remove(buffer_path)
