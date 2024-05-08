@@ -17,7 +17,7 @@ local CONSTANTS = {
 
 -- list_panes_text is output of 'tmux list-panes -a'
 local get_current_tmux_pane_id = function (list_panes_text, tmux_pane_id)
-  local tmux_pane_pattern = string.gsub(tmux_pane_id, '%%', '%%%%')  -- escape nightmare
+  local tmux_pane_pattern = string.gsub(tmux_pane_id, '%%', '%%%%')
   for l in string.gmatch(list_panes_text, '[^\n]+') do
     if string.find(l, tmux_pane_pattern) then
       local pane_id = string.sub(l, 0, string.find(l, ' ')-1)
@@ -89,7 +89,6 @@ local get_last_visual_mode = function ()
   return last_visual_mode
 end
 
-
 local join_table = function (table, sep)
   local sep = sep or '\n'
   local result = ''
@@ -154,17 +153,34 @@ local function wait_for_cpaste_entry(target_pane, wait_time_seconds)
 end
 
 M.paste_type.python = function (text)
-  local text = text or get_selected_text()
   M.paste_type.text('%cpaste\n')
   wait_for_cpaste_entry(get_target_pane())
   M.paste_type.text(tostring(text)..'\n')
   M.paste_type.text('--\n')
 end
 
-M.paste = function ()
+local function get_paster()
   local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
-  local f = M.paste_type[filetype]
-  if f then f() else M.paste_type.text() end
+  local f = M.paste_type[filetype] or M.paste_type.text
+  return f
+end
+
+M.paste_selected = function ()
+  local text = get_selected_text()
+  local paster = get_paster()
+  paster(text)
+end
+
+local get_all_text = function ()
+  local lines = get_buffer_lines(1, -1)
+  local text = join_table(lines)
+  return text
+end
+
+M.paste_all = function ()
+  local text = get_all_text()
+  local paster = get_paster()
+  paster(text)
 end
 
 return M
